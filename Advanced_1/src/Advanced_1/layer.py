@@ -7,14 +7,11 @@ Created on 25 Jan 2017
 import numpy as np
 import abc
 
-from scipy.ndimage.filters import maximum_filter
-
 class Layer():
     __metaclass__ = abc.ABCMeta
 
     def __init__(self, n_units, weights, biases):
         self.n_units = n_units
-#         self.n_weights = n_weights
         self.x = None
         self.y = np.zeros(n_units) #outputs / activations
         self.dL_dW = None
@@ -89,6 +86,7 @@ class FlattenLayer():
     
     def zero_gradients(self, ):
         return
+
     
 class ReLULayer(LinearLayer):
     
@@ -103,6 +101,7 @@ class ReLULayer(LinearLayer):
     def backward_pass(self, dL_dy):
         relu_dL_dy = dL_dy * np.greater(self.y, 0).astype(float)      
         return super(ReLULayer, self).backward_pass(relu_dL_dy)
+
         
 class ConvLayerColumns(Layer):
     
@@ -165,6 +164,7 @@ class ConvLayerColumns(Layer):
         self.dL_dW += np.outer(dL_dy.T, self.x.T)
         self.dL_db += dL_dy
         return 
+
     
 class ConvLayer(Layer):
     
@@ -268,13 +268,9 @@ class CrossEntropyLogits():
     def get_loss(self, x, labels):
         exs = np.exp(x)
         sum_exs = np.sum( exs ) 
-        if not sum_exs==0:
-            self.softmax_output = exs/sum_exs   
-        else:
-            print('')      
+        self.softmax_output = exs/sum_exs   
         return -np.log(labels.dot(self.softmax_output))
         
     def get_gradient(self, x, labels):              
         return self.softmax_output - labels         
         
-            

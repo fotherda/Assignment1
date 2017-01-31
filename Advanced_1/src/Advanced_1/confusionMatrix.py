@@ -4,7 +4,6 @@ Created on 28 Jan 2017
 @author: Dave
 '''
 
-from sklearn.metrics import confusion_matrix
 import matplotlib.pyplot as plt
 import numpy as np
 import itertools

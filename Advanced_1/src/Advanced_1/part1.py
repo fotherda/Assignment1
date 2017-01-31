@@ -2,6 +2,7 @@ from __future__ import absolute_import
 from __future__ import division
 from __future__ import print_function
 
+
 import argparse
 import sys
 import numpy as np
@@ -13,10 +14,10 @@ from tensorflow.examples.tutorials.mnist import input_data
 from Advanced_1.convergenceTester import ConvergenceTester
 from sklearn.metrics import confusion_matrix
 
-
 root_dir = 'C:/Users/Dave/Documents/GI13-Advanced/Assignment1';
 summaries_dir = root_dir + '/Summaries';
 save_dir = root_dir + '/SavedVariables';
+
 
 def weight_variable(shape):
     initial = tf.truncated_normal(shape, stddev=0.1)
@@ -52,7 +53,6 @@ def print_confusion_matrix(x, y_, X, Y_, argm_y, argm_y_, sess, keep_prob, model
     
     cnf_matrix = confusion_matrix(y_true, y_pred)
     class_names = ['0', '1', '2', '3', '4', '5', '6', '7', '8', '9']
-#     np.set_printoptions(precision=2)
 
     # Plot non-normalized confusion matrix
     plt.figure()
@@ -125,18 +125,11 @@ def part_d(x):
     y = tf.matmul(h_fc1_drop, W_fc2) + b_fc2
 
     return y, keep_prob
-# 
-# def do_eval(message, sess, correct_prediction, accuracy, pred, X_, y_):
-#     predictions = sess.run([correct_prediction], feed_dict={x: X_, y: y_})
-#     prediction  = tf.argmax(pred,1)
-#     labels = prediction.eval(feed_dict={x: X_, y: y_}, session=sess)
-#     print message, accuracy.eval({x: X_, y: y_}),"\n"
-#     confusionMatrix("Partial Confusion matrix",y_,predictions[0], False)#Partial confusion Matrix
-#     confusionMatrix("Complete Confusion matrix",y_,labels, True) #complete confusion Matrix
         
    
-def main(_):
+def run_part1_models(FLAGS):
     print('Tensorflow version: ', tf.VERSION)
+    print(sys.path)
     
     # Import data
     mnist = input_data.read_data_sets(FLAGS.data_dir, one_hot=True)
@@ -144,11 +137,15 @@ def main(_):
     y_ = tf.placeholder(tf.float32, [None, 10])
     keep_prob = tf.placeholder(tf.float32)
 
-#     y = part_a(x); model_type = 'P1_a'
-#     y = part_b(x); model_type = 'P1_b'
-#     y = part_c(x); model_type = 'P1_c'
-    y, keep_prob = part_d(x); model_type = 'P1_d'
-      
+    if FLAGS.model=='P1_a':
+        y = part_a(x) 
+    elif FLAGS.model=='P1_b':
+        y = part_b(x)
+    elif FLAGS.model=='P1_c':
+        y = part_c(x) 
+    elif FLAGS.model=='P1_d':
+        y, keep_prob  = part_d(x)
+    
     cross_entropy = tf.reduce_mean(
         tf.nn.softmax_cross_entropy_with_logits(labels=y_, logits=y))
     tf.summary.scalar('CrossEntropy', cross_entropy)
@@ -169,10 +166,11 @@ def main(_):
     y_test = mnist.test.labels   
 
     with tf.Session() as sess:    
+
+        file_name = save_dir + '/' + FLAGS.model + '_' + str(learningRate) + '.ckpt';    
                    
-        if False: #Restore saved model       
-            file_name = save_dir + '/' + model_type + '_' + str(learningRate) + '.ckpt';    
-            saver2restore = tf.train.Saver()
+        if FLAGS.use_saved: #Restore saved model       
+            saver2restore = tf.train.Saver(write_version=tf.train.SaverDef.V1)
             tf.global_variables_initializer().run()    
             saver2restore.restore(sess, file_name)
             
@@ -180,7 +178,7 @@ def main(_):
             # Merge all the summaries and write them out to file
             merged = tf.summary.merge_all()
             
-            dir_name = summaries_dir + '/' + model_type + '/lRate_' + str(learningRate);
+            dir_name = summaries_dir + '/' + FLAGS.model + '/lRate_' + str(learningRate);
             train_writer = tf.summary.FileWriter(dir_name + '/train', sess.graph)
             test_writer = tf.summary.FileWriter(dir_name + '/test')
             
@@ -208,47 +206,27 @@ def main(_):
                     
             #save trained model
             saver = tf.train.Saver(write_version=tf.train.SaverDef.V1)
-#             saver = tf.train.Saver()
-            file_name = save_dir + '/' + model_type + '_' + str(learningRate) + '.ckpt';    
             save_path = saver.save(sess, file_name)
             print("Model saved in file: %s" % save_path)
         
             
-        #print final results
-#         print_confusion_matrix(x, y_, X_train, y_train, argm_y, argm_y_, 
-#                                sess, 'Train', keep_prob)
-#         print_confusion_matrix(x, y_, X_test, y_test, argm_y, argm_y_, 
-#                                sess, 'Test', keep_prob)
-        
+        #print final results        
         print_confusion_matrix(x, y_, X_train, y_train, argm_y, argm_y_, 
-                               sess, keep_prob, model_type + ' training data')
+                               sess, keep_prob, FLAGS.model + ' training data')
         print_confusion_matrix(x, y_, X_test, y_test, argm_y, argm_y_, 
-                               sess, keep_prob, model_type + ' test data')
+                               sess, keep_prob, FLAGS.model + ' test data')
 
-                
         print("Training Error rate:", 1-accuracy.eval({x: X_train, y_: y_train, 
                                                               keep_prob: 1.0}))
         print("Test Error rate:", 1-accuracy.eval({x: X_test, y_: y_test, 
                                                               keep_prob: 1.0}))
 
-    
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser()
     parser.add_argument('--data_dir', type=str, default='/tmp/tensorflow/mnist/input_data',
                         help='Directory for storing input data')
+    parser.add_argument('--use_saved', action='store_true', default=True, help='Use saved data')
+    parser.add_argument('--model', type=str, default='a', help='which model to run, one of [a, b, c, d]')
     FLAGS, unparsed = parser.parse_known_args()
     tf.app.run(main=main, argv=[sys.argv[0]] + unparsed)
-
-
-# def variable_summaries(var):
-#   """Attach a lot of summaries to a Tensor (for TensorBoard visualization)."""
-#   with tf.name_scope('summaries'):
-#     mean = tf.reduce_mean(var)
-#     tf.summary.scalar('mean', mean)
-#     with tf.name_scope('stddev'):
-#       stddev = tf.sqrt(tf.reduce_mean(tf.square(var - mean)))
-#     tf.summary.scalar('stddev', stddev)
-#     tf.summary.scalar('max', tf.reduce_max(var))
-#     tf.summary.scalar('min', tf.reduce_min(var))
-#     tf.summary.histogram('histogram', var)

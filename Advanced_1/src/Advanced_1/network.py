@@ -8,7 +8,7 @@ class Network():
  
     def __init__(self):
         self.layers = []
-    
+        
     def addLayer(self, layer):
         self.layers.append(layer)
         
