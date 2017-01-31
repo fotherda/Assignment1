@@ -7,6 +7,7 @@ Created on 28 Jan 2017
 import matplotlib.pyplot as plt
 import numpy as np
 import itertools
+import pickle
 
 def plot_confusion_matrix(cm, classes,
                           normalize=False,
@@ -40,3 +41,34 @@ def plot_confusion_matrix(cm, classes,
     plt.tight_layout()
     plt.ylabel('True label')
     plt.xlabel('Predicted label')
+
+
+def compare_confusion_matrices():
+    labels = ['a','b','c','d']
+    cm_list = []
+    
+    for label in labels:
+        model_filename = 'P1_'+ label + '_training_data.p'
+        cm = pickle.load( open( model_filename, "rb" ) )
+        np.fill_diagonal(cm, 0)
+        cm = cm/cm.sum(axis=1)[:,None] #normalize each row
+        cm_list.append( cm.flatten() )
+        
+    for label in labels[:3]:
+        model_filename = 'P2_'+ label + '_train_data.p'
+        cm = pickle.load( open( model_filename, "rb" ) )
+        np.fill_diagonal(cm, 0)
+        cm = cm/cm.sum(axis=1)[:,None] #normalize each row
+        cm_list.append( cm.flatten() )
+        
+    corr_mtx = np.zeros((len(cm_list),len(cm_list)))    
+        
+    for i in range(len(cm_list)):
+        for j in range(len(cm_list)):         
+            rho = np.corrcoef(cm_list[i], cm_list[j], rowvar=0)
+            corr_mtx[i,j] = rho[0,1]
+    
+    np.set_printoptions(precision=2)
+    corr_mtx_str = np.array2string(corr_mtx, separator=', ')
+    print(str(corr_mtx_str).replace('[','').replace(']',''))       
+    return

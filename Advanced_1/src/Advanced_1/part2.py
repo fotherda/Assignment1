@@ -32,6 +32,9 @@ def print_confusion_matrix(network, X, y, model_type):
     y_true = y.argmax(axis=1)
     
     cnf_matrix = confusion_matrix(y_true, y_pred)
+    cm_filename = model_type.replace(' ','_') + '.p'
+    pickle.dump( cnf_matrix, open( cm_filename, "wb" ) )    
+
     class_names = ['0', '1', '2', '3', '4', '5', '6', '7', '8', '9']
     np.set_printoptions(precision=2)
 

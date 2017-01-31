@@ -6,6 +6,7 @@ from __future__ import print_function
 import argparse
 import sys
 import numpy as np
+import pickle
 import tensorflow as tf
 import matplotlib.pyplot as plt
 import Advanced_1.confusionMatrix as cm
@@ -52,6 +53,9 @@ def print_confusion_matrix(x, y_, X, Y_, argm_y, argm_y_, sess, keep_prob, model
     y_true = pred_label[1]
     
     cnf_matrix = confusion_matrix(y_true, y_pred)
+    cm_filename = model_type.replace(' ','_') + '.p'
+    pickle.dump( cnf_matrix, open( cm_filename, "wb" ) )    
+    
     class_names = ['0', '1', '2', '3', '4', '5', '6', '7', '8', '9']
 
     # Plot non-normalized confusion matrix
