@@ -9,6 +9,7 @@ import pickle
 
 from tensorflow.examples.tutorials.mnist import input_data
 from Advanced_1.dataBatcher import DataBatcher
+from Advanced_1.learningRateScheduler import LearningRateScheduler
 from Advanced_1.network import Network
 from Advanced_1.layer import LinearLayer
 from Advanced_1.layer import ReLULayer
@@ -17,6 +18,7 @@ from Advanced_1.layer import ConvLayerColumns
 from Advanced_1.layer import MaxPoolLayer
 from Advanced_1.layer import FlattenLayer
 from Advanced_1.layer import CrossEntropyLogits
+
 from Advanced_1.convergenceTester import ConvergenceTester
 
 from scipy.misc import toimage
@@ -119,25 +121,32 @@ def run_part2_models(FLAGS):
 
     train_accuracy_hist = []
     test_accuracy_hist = []
-    conv_tester = ConvergenceTester(0.0005, lookback_window=5) #stop if converged to within 0.05%
-    learning_rate = 0.0001
+    conv_tester = ConvergenceTester(0.0005, lookback_window=25) #stop if converged to within 0.01%
+    learning_rate = 0.005
+    decay = learning_rate / 50000
+#     learning_rate = 0.1
+#     decay = learning_rate / 2e6
     
-    model_filename = "trained_model_" + model_type + ".p"
+    model_filename = FLAGS.saved_model_dir + '/' + "trained_model_" + model_type + ".p"
     
     if FLAGS.use_saved:
         network = pickle.load( open( model_filename, "rb" ) )
+        train_accuracy = network.get_accuracy(X_train, y_train)
+        test_accuracy = network.get_accuracy(X_test, y_test)
     else:
-        for i in range(30000):
+        lrs = LearningRateScheduler(decay)
+        for i in range(50000):
+            learning_rate = lrs.get_learning_rate(i, learning_rate)
             batch_xs, batch_ys = data_batcher.next_batch(50)
             train_error = network.run_one_train_epoch(batch_xs, batch_ys, learning_rate)
     
             if i % 100 == 0:
                 train_accuracy = network.get_accuracy(X_train, y_train)
-                test_accuracy = network.get_accuracy(X_test, y_test)
-                train_accuracy_hist.append([i,train_accuracy])
+                test_accuracy = network.append([i,train_accuracy])
                 test_accuracy_hist.append([i,test_accuracy])
     
-                print('{0:d} accuracy train test: {1:0.5f} : {2:0.5f}'.format( i, train_accuracy, test_accuracy))
+                print('{0:d} accuracy train test: {1:0.5f} : {2:0.5f} learning rate {3:0.8f}'.
+                      format( i, train_accuracy, test_accuracy, learning_rate))
                 
                 if conv_tester.has_converged(test_accuracy):
                     print('converged after ', i, ' epochs')
@@ -148,6 +157,7 @@ def run_part2_models(FLAGS):
     
         pickle.dump( network, open( model_filename, "wb" ) )    
 
+    print('Final accuracy train, test: {0:0.5f}, {1:0.5f}'.format( train_accuracy, test_accuracy))
     print_confusion_matrix(network, X_train, y_train, model_type + ' train data')
     print_confusion_matrix(network, X_test, y_test, model_type + ' test data')
     

@@ -45,7 +45,7 @@ class Network():
             dL_dy = self.loss_function.get_gradient(y, labels)
             self.backward_pass(dL_dy)
                    
-        self.update_parameters(learning_rate)   
+        self.update_parameters(learning_rate) 
           
         return L
     

@@ -13,11 +13,13 @@ import Advanced_1.confusionMatrix as cm
 
 from tensorflow.examples.tutorials.mnist import input_data
 from Advanced_1.convergenceTester import ConvergenceTester
+from Advanced_1.learningRateScheduler import LearningRateScheduler
 from sklearn.metrics import confusion_matrix
 
 root_dir = 'C:/Users/Dave/Documents/GI13-Advanced/Assignment1';
 summaries_dir = root_dir + '/Summaries';
-save_dir = root_dir + '/SavedVariables';
+# save_dir = root_dir + '/SavedVariables';
+save_dir = root_dir;
 
 
 def weight_variable(shape):
@@ -64,7 +66,6 @@ def print_confusion_matrix(x, y_, X, Y_, argm_y, argm_y_, sess, keep_prob, model
                           title=('Confusion matrix - ' + model_type))    
     plt.show()
 
-    
 def part_a(x):
     W = weight_variable([784, 10])
     b = weight_variable([10])
@@ -154,8 +155,11 @@ def run_part1_models(FLAGS):
         tf.nn.softmax_cross_entropy_with_logits(labels=y_, logits=y))
     tf.summary.scalar('CrossEntropy', cross_entropy)
     
-    learningRate = 0.05;
-    train_step = tf.train.GradientDescentOptimizer(learningRate).minimize(cross_entropy)
+    learning_rate = tf.placeholder(tf.float32, shape=[])
+    lr = 0.1;
+    decay = lr / 2e6
+    
+    train_step = tf.train.GradientDescentOptimizer(learning_rate).minimize(cross_entropy)
 
     # Test trained model
     argm_y = tf.argmax(y, 1)
@@ -171,7 +175,7 @@ def run_part1_models(FLAGS):
 
     with tf.Session() as sess:    
 
-        file_name = save_dir + '/' + FLAGS.model + '_' + str(learningRate) + '.ckpt';    
+        file_name = FLAGS.saved_model_dir + '/' + FLAGS.model + '_' + str(lr) + '.ckpt';    
                    
         if FLAGS.use_saved: #Restore saved model       
             saver2restore = tf.train.Saver(write_version=tf.train.SaverDef.V1)
@@ -182,24 +186,26 @@ def run_part1_models(FLAGS):
             # Merge all the summaries and write them out to file
             merged = tf.summary.merge_all()
             
-            dir_name = summaries_dir + '/' + FLAGS.model + '/lRate_' + str(learningRate);
+            dir_name = summaries_dir + '/' + FLAGS.model + '/lRate_' + str(lr);
             train_writer = tf.summary.FileWriter(dir_name + '/train', sess.graph)
             test_writer = tf.summary.FileWriter(dir_name + '/test')
             
             # init operation
             tf.global_variables_initializer().run()    
             
-            conv_tester = ConvergenceTester(0.0005) #stop if converged to within 0.05%
-            
+            conv_tester = ConvergenceTester(0.0005, lookback_window=25) #stop if converged to within 0.05%
+            lrs = LearningRateScheduler(decay)
+
             # Train
             for i in range(30000):
+                lr = lrs.get_learning_rate(i, lr)
                 batch_xs, batch_ys = mnist.train.next_batch(50)
-                sess.run(train_step, feed_dict={x: batch_xs, y_: batch_ys, keep_prob: 0.5})
+                sess.run(train_step, feed_dict={x: batch_xs, y_: batch_ys, learning_rate: lr, keep_prob: 0.5})
          
                 if i % 100 == 0: #calc intermediate results
                     train_accuracy, train_summary = sess.run([accuracy, merged], feed_dict={x: X_train, y_: y_train, keep_prob: 1.0})                                      
                     test_accuracy, test_summary = sess.run([accuracy, merged], feed_dict={x: X_test, y_: y_test, keep_prob: 1.0})
-                    print("step %d, training : test accuracy %g : %g" % (i, train_accuracy, test_accuracy))
+                    print("step %d, training : test accuracy %g : %g learning rate %f" % (i, train_accuracy, test_accuracy, lr))
                                    
                     train_writer.add_summary(train_summary, i)
                     test_writer.add_summary(test_summary, i)
@@ -215,15 +221,15 @@ def run_part1_models(FLAGS):
         
             
         #print final results        
+        print("Training Error rate:", 1-accuracy.eval({x: X_train, y_: y_train, 
+                                                              keep_prob: 1.0}))
+        print("Test Error rate:", 1-accuracy.eval({x: X_test, y_: y_test, 
+                                                              keep_prob: 1.0}))
         print_confusion_matrix(x, y_, X_train, y_train, argm_y, argm_y_, 
                                sess, keep_prob, FLAGS.model + ' training data')
         print_confusion_matrix(x, y_, X_test, y_test, argm_y, argm_y_, 
                                sess, keep_prob, FLAGS.model + ' test data')
 
-        print("Training Error rate:", 1-accuracy.eval({x: X_train, y_: y_train, 
-                                                              keep_prob: 1.0}))
-        print("Test Error rate:", 1-accuracy.eval({x: X_test, y_: y_test, 
-                                                              keep_prob: 1.0}))
 
 
 if __name__ == '__main__':
